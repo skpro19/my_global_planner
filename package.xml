@@ -68,14 +68,16 @@
   <depend>move_base_msgs</depend>
   <depend>visualization_msgs</depend>
   <depend>nav_core</depend>
-    
+
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <!-- Other tools can request additional information be placed here -->
-
+  
+    <nav_core plugin="${prefix}/global_planner_plugin.xml" />
+  
   </export>
+
 </package>
