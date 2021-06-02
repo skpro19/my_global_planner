@@ -295,6 +295,15 @@ actionlib_DIR:PATH=/home/skpro19/catkin_ws/devel/share/actionlib/cmake
 //The directory containing a CMake configuration file for actionlib_msgs.
 actionlib_msgs_DIR:PATH=/opt/ros/melodic/share/actionlib_msgs/cmake
 
+//The directory containing a CMake configuration file for angles.
+angles_DIR:PATH=/opt/ros/melodic/share/angles/cmake
+
+//The directory containing a CMake configuration file for base_local_planner.
+base_local_planner_DIR:PATH=/home/skpro19/catkin_ws/devel/share/base_local_planner/cmake
+
+//The directory containing a CMake configuration file for base_local_planners.
+base_local_planners_DIR:PATH=base_local_planners_DIR-NOTFOUND
+
 //The directory containing a CMake configuration file for catkin.
 catkin_DIR:PATH=/opt/ros/melodic/share/catkin/cmake
 
@@ -330,6 +339,9 @@ genpy_DIR:PATH=/opt/ros/melodic/share/genpy/cmake
 
 //The directory containing a CMake configuration file for geometry_msgs.
 geometry_msgs_DIR:PATH=/opt/ros/melodic/share/geometry_msgs/cmake
+
+//Dependencies for target
+global_planner_lib_LIB_DEPENDS:STATIC=
 
 //Value Computed by CMake
 gmock_BINARY_DIR:STATIC=/home/skpro19/catkin_ws/src/my_global_planner/build/gtest/googlemock
@@ -384,7 +396,7 @@ gtest_main_LIB_DEPENDS:STATIC=general;-lpthread;general;gtest;
 laser_geometry_DIR:PATH=/opt/ros/melodic/share/laser_geometry/cmake
 
 //Path to a library.
-lib:FILEPATH=/home/skpro19/catkin_ws/devel/.private/voxel_grid/lib/libvoxel_grid.so
+lib:FILEPATH=/home/skpro19/catkin_ws/devel/.private/base_local_planner/lib/libtrajectory_planner_ros.so
 
 //The directory containing a CMake configuration file for map_msgs.
 map_msgs_DIR:PATH=/opt/ros/melodic/share/map_msgs/cmake
@@ -415,6 +427,12 @@ my_global_planner_BINARY_DIR:STATIC=/home/skpro19/catkin_ws/src/my_global_planne
 
 //Value Computed by CMake
 my_global_planner_SOURCE_DIR:STATIC=/home/skpro19/catkin_ws/src/my_global_planner
+
+//The directory containing a CMake configuration file for nav.
+nav_DIR:PATH=nav_DIR-NOTFOUND
+
+//The directory containing a CMake configuration file for nav_core.
+nav_core_DIR:PATH=/home/skpro19/catkin_ws/devel/share/nav_core/cmake
 
 //The directory containing a CMake configuration file for nav_msgs.
 nav_msgs_DIR:PATH=/opt/ros/melodic/share/nav_msgs/cmake

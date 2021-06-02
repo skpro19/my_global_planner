@@ -18,7 +18,8 @@ find_package(catkin REQUIRED COMPONENTS
   costmap_2d
   move_base
   visualization_msgs
-  
+  nav_core
+  base_local_planner
   
 )
 
@@ -135,6 +136,8 @@ include_directories(
 
 ## Declare a C++ library
 #add_library(${PROJECT_NAME}
+
+add_library(global_planner_lib src/global_planner.cpp)
 
 
 

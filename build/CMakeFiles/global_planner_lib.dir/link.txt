@@ -1,0 +1,1 @@
+/usr/bin/x86_64-linux-gnu-g++-7 -fPIC -g  -shared -Wl,-soname,libglobal_planner_lib.so -o devel/lib/libglobal_planner_lib.so CMakeFiles/global_planner_lib.dir/src/global_planner.cpp.o 
