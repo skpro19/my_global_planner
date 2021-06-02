@@ -1,0 +1,8 @@
+prefix=/home/skpro19/catkin_ws/src/my_global_planner/build/devel
+
+Name: my_global_planner
+Description: Description of my_global_planner
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

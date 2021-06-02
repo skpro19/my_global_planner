@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/skpro19/catkin_ws/src/my_global_planner/build/devel/setup.sh
