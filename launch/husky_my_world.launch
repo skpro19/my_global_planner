@@ -26,8 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 <launch>
 
   
-  <arg name="world_name" value="$(find my_global_planner)/worlds/world_five.world"/>
-  
+  <arg name="world_name" value="$(find my_global_planner)/worlds/world_ten.world"/>
   
   <!-- arg name="world_name" value="$(find bot_mapper)/gazebo/world_one.world" / -->
 
@@ -38,7 +37,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
     <arg name="world_name" value="$(arg world_name)"/> <!-- world_name is wrt GAZEBO_RESOURCE_PATH environment variable -->
     <arg name="paused" value="false"/>
       <arg name="use_sim_time" value="true"/>
-    <arg name="gui" value="true"/>
+    <arg name="gui" value="false"/>
     <arg name="headless" value="false"/>
     <arg name="debug" value="false"/>
   </include>
@@ -50,10 +49,8 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find bot_mapper)/rviz/robot.rviz" />
   
-  <node type="map_server" name="map_server" pkg="map_server" args="$(find my_global_planner)/map_files/my_map.yaml"/>
+  <node type="map_server" name="map_server" pkg="map_server" args="$(find my_global_planner)/map_files/map_ten.yaml"/>
 
   <node type="amcl" name="amcl" pkg="amcl" />
-
-
 
 </launch>
