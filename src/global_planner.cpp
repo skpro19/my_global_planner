@@ -106,11 +106,30 @@ namespace global_planner {
   
   }
 
+  void GlobalPlanner::update_planner_plan(vector<Point> &path_points, vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal) {
+
+    for(int i =0 ; i < (int)path_points.size(); i++) {
+
+      geometry_msgs::PoseStamped curr_pt = goal;
+
+      double wx_c, wy_c; 
+      __uint32_t mx_c = path_points[i].x, my_c = path_points[i].y;
+
+      costmap_ros_->mapToWorld(mx_c, my_c, wx_c, wy_c);
+
+      curr_pt.pose.position.x = wx_c;
+      curr_pt.pose.position.y = wy_c;      
+
+      plan.push_back(curr_pt);
+
+    }
+  }
+
   bool GlobalPlanner::makePlanTwo(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan ){
 
     cout << "Inside the make_plan function!" << endl;
 
-    bool reached  = false;
+    cout << "Hello World!" << endl;
     
     __uint32_t mx_i, my_i, mx_f, my_f;
 
@@ -130,126 +149,63 @@ namespace global_planner {
     cout << "w_f: (" << wx_f << "," << wy_f << ") m_f: (" << mx_f << "," << my_f <<")" << endl;;
     cout << endl;
 
-    cout << "Sleeping for 1 second!" << endl;
-    ros::Duration(1.0).sleep();
-    cout << endl;
+    vector<Point> path_points;
+    path_points.clear();
+
+    __uint32_t mx_last = mx_i, my_last =  my_i;
 
 
-    vector<Point> path_points; 
-  
-    Point last_point = Point{mx_i, my_i};
-
-    map<Point, double> point_cost_index;
-
-    point_cost_index[last_point] = 0; 
-
-    while(true) {
-      
-      cout << "last_point: (" << last_point.x << "," << last_point.y << ")" << endl;
-      
-      path_points.push_back(last_point);
-      cout << "path_points.size(): " << path_points.size() << endl;
-
-      if(last_point == Point{mx_f, my_f}) {
-
-        cout << "Goal Reached!" << endl; 
-        reached = true;
-        return true; 
-        break;
-
-      }
-
-      __uint32_t mx_last = last_point.x , my_last = last_point.y;
-
-      cout << "mx_last: " << mx_last << " my_last: " << my_last << endl;
-
-      double mn_cost = UINT32_MAX;
-
-      Point best_pt = Point{};
-
-      int loop_cnt = 0;
-
-      for(int i = (int)mx_last - 1; i <= (int)mx_last + 1; i++) {
-
-        for(int j = (int)my_last - 1; j<= (int)my_last + 1; j++) {
-          
-          //cout << "i: " << i << "j: " << j << endl;
-          //ros::Duration(1.0).sleep() ;
-
-          loop_cnt++;
-
-          if(i < 0 || j < 0 || i >=size_x || j >= size_y || (i == mx_last && j== my_last)) {continue;}
-
-          if((costmap_ros_->getCost(i,j) == costmap_2d::LETHAL_OBSTACLE) || (costmap_ros_->getCost(i,j) == costmap_2d::NO_INFORMATION)) {
-
-            continue;
-
-          }
-
-          double new_cost = point_cost_index[last_point] + 1 + heu( Point{i,j}, Point{mx_f, my_f} );
-
-          //double new_cost = 0 ;
-
-          if(new_cost < mn_cost) {
-
-            mn_cost = new_cost;
-            best_pt = Point{(__uint32_t)i, (__uint32_t)j};
-
-          }
-
-        }
-
-      }
-
-      //cout << "loop_cnt: " << loop_cnt << endl;
-      //ros::Duration(1.0).sleep();
 
 
-      if(best_pt == Point{})  {
-
-        cout << "Could not find a suitable point to update the last_point variable ------Something seems to be wrong!" << endl;
-
-      }
 
 
-      last_point = best_pt;
-      point_cost_index[last_point] = mn_cost ;
-    
+    //vis_points.insert(best_pt);
+
+    for(int i =0 ; i < (int)path_points.size(); i++) {
+
+      geometry_msgs::PoseStamped curr_pt = goal;
+
+      double wx_c, wy_c; 
+      __uint32_t mx_c = path_points[i].x, my_c = path_points[i].y;
+
+      costmap_ros_->mapToWorld(mx_c, my_c, wx_c, wy_c);
+
+      curr_pt.pose.position.x = wx_c;
+      curr_pt.pose.position.y = wy_c;      
+
+      plan.push_back(curr_pt);
+
     }
 
-    cout << "reached: " << reached << endl; 
+    nav_msgs::Path my_path = {};
+
+    my_path.header.frame_id = goal.header.frame_id;
+    my_path.header.stamp = ros::Time::now();
+
+    my_path.poses = plan;
+
+    global_plan_pub.publish(my_path);
+
     cout << "path_points.size(): " << path_points.size() << endl;
-    ros::Duration(2.0).sleep();
+    cout << "plan.size(): " << plan.size() << endl;
 
-    for(int i =0 ;i < (int)path_points.size(); i++) {
+    //cout << "Sleeping for 3 seconds!" << endl; 
+    //ros::Duration(3.0).sleep();
 
-        geometry_msgs::PoseStamped pt{};
-        pt.header.stamp = ros::Time::now();
+    return true;
 
-        pt.header.frame_id = start.header.frame_id;
+  }
 
-        double wx_c, wy_c;
+  void GlobalPlanner::publish_global_path(const vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal) {
 
-        __uint32_t mx_c, my_c;
+    nav_msgs::Path my_path = {};
 
-        costmap_ros_->mapToWorld(mx_c, my_c, wx_c, wy_c);
+    my_path.header.frame_id = goal.header.frame_id;
+    my_path.header.stamp = ros::Time::now();
 
-        pt.pose.position.x = wx_c;
-        pt.pose.position.y= wy_c;
-        pt.pose.orientation= start.pose.orientation;
+    my_path.poses = plan;
 
-        tf::Quaternion goal_quat = tf::createQuaternionFromYaw(1.54);
-        
-        pt.pose.orientation.x = goal_quat.x();
-        pt.pose.orientation.y = goal_quat.y();
-        pt.pose.orientation.z = goal_quat.z();
-        pt.pose.orientation.w = goal_quat.w();
-
-        plan.push_back(pt);
-    }
-
-    return reached;
-
+    global_plan_pub.publish(my_path);
 
   }
 
@@ -286,7 +242,7 @@ namespace global_planner {
     while(true){ 
       
    
-      if(mx_last >= mx_f || my_last == my_f) {
+      if(mx_last >= mx_f || my_last >= my_f) {
 
         cout << "Almost reached the goal -- -breaking from the while loop!" << endl; 
         break;
@@ -358,28 +314,11 @@ namespace global_planner {
 
     //vis_points.insert(best_pt);
 
-    for(int i =0 ; i < (int)path_points.size(); i++) {
+    update_planner_plan(path_points, plan, goal);
 
-      geometry_msgs::PoseStamped curr_pt = goal;
-
-      double wx_c, wy_c; 
-      __uint32_t mx_c = path_points[i].x, my_c = path_points[i].y;
-
-      costmap_ros_->mapToWorld(mx_c, my_c, wx_c, wy_c);
-
-      curr_pt.pose.position.x = wx_c;
-      curr_pt.pose.position.y = wy_c;      
-
-      plan.push_back(curr_pt);
-
-    }
-
-    cout << "path_points.size(): " << path_points.size() << endl;
-    cout << "plan.size(): " << plan.size() << endl;
-
-    //cout << "Sleeping for 3 seconds!" << endl; 
-    //ros::Duration(3.0).sleep();
-
+    publish_global_path(plan, goal);
+    
+    
     return true;
 
   }
