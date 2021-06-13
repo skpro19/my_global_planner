@@ -25,10 +25,9 @@ namespace global_planner {
             
                 __uint32_t x, y; 
 
-                bool operator==(const Point &p1 ) {    return ((p1.x == this->x) && (p1.y == this->y));  }   
+                bool operator==(const Point &p1 ) {   return ((p1.x == x) && (p1.y == y));  }   
                 
-                bool operator<(const Point &p1 ) const{    return (p1.x < this->x) ;  }   
-
+                bool operator<(const Point &p1 ) const{    return ((p1.x < x) || (p1.x == x && p1.y < y) ) ;  }   
 
             };
 
@@ -38,18 +37,16 @@ namespace global_planner {
             Point point; 
             __uint32_t cost_till_now;
 
-        };
+            bool operator<(const Cell &c1) const {
+                
+                
+                return (c1.cost_till_now < cost_till_now || (c1.cost_till_now == cost_till_now && c1.point < point));
 
-
-        struct compare_cost{
-            
-            bool operator() (Cell &p1, Cell &p2) 
-            {
-
-                return p1.cost_till_now < p2.cost_till_now;
             }
-
+        
         };
+
+
 
         public:
 
@@ -75,10 +72,10 @@ namespace global_planner {
 
 
             double heu(Point p1, Point p2);
-            
             void update_planner_plan(std::vector<Point> &path_points, std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal); 
             void publish_global_path(const std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal);
-      
+            bool print_cell(const Cell &cell);
+
             costmap_2d::Costmap2D* costmap_ros_;
             costmap_2d::Costmap2DROS *costmap_ros;
             __uint32_t size_x, size_y;
