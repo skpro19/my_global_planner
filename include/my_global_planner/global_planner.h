@@ -20,12 +20,13 @@
 namespace global_planner {
 
     class GlobalPlanner : public nav_core::BaseGlobalPlanner {
-
+        
+        
         struct Point {
             
                 __uint32_t x, y; 
 
-                bool operator==(const Point &p1 ) {   return ((p1.x == x) && (p1.y == y));  }   
+                bool operator==(const Point &p1 ) const{   return ((p1.x == x) && (p1.y == y));  }   
                 
                 bool operator<(const Point &p1 ) const{    return ((p1.x < x) || (p1.x == x && p1.y < y) ) ;  }   
 
@@ -46,27 +47,25 @@ namespace global_planner {
         
         };
 
+        struct RRT_Cell{
+
+            Point point;
+            RRT_Cell* next_cell;
+            RRT_Cell *prev_cell;
+            
+        };
+
 
 
         public:
 
-            
-
             GlobalPlanner();
+            
             GlobalPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
-
             void initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
+            bool makePlan(const geometry_msgs::PoseStamped& start,const geometry_msgs::PoseStamped& goal,std::vector<geometry_msgs::PoseStamped>& plan);
 
-            bool makePlan(const geometry_msgs::PoseStamped& start,
-                            const geometry_msgs::PoseStamped& goal,
-                            std::vector<geometry_msgs::PoseStamped>& plan
-                        );
-
-            bool makePlanOne(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan );
-            bool makePlanTwo(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan );
-            bool makePlanThree(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan );
-            bool make_straight_plan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan);
-
+            
 
         private: 
 
@@ -75,12 +74,22 @@ namespace global_planner {
             void update_planner_plan(std::vector<Point> &path_points, std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal); 
             void publish_global_path(const std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal);
             bool print_cell(const Cell &cell);
+            bool make_straight_plan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan);
+            void print_world_params(const geometry_msgs::PoseStamped &start, const geometry_msgs::PoseStamped &goal, __uint32_t &mx_i, __uint32_t &my_i, __uint32_t &mx_f, __uint32_t &my_f);
+            Point generate_next_goal();
+            bool makePlanOne(const geometry_msgs::PoseStamped& start,const geometry_msgs::PoseStamped& goal,std::vector<geometry_msgs::PoseStamped>& plan);
+            void update_map_bounds();
+            RRT_Cell* get_next_best_cell(const Point &curr_point, RRT_Cell* head_cell);
+
 
             costmap_2d::Costmap2D* costmap_ros_;
-            costmap_2d::Costmap2DROS *costmap_ros;
+            costmap_2d::Costmap2DROS *my_costmap_ros;
             __uint32_t size_x, size_y;
-            ros::Publisher global_plan_pub;
-
+            __uint32_t map_xi, map_xf, map_yi, map_yf;
+            ros::Publisher global_plan_pub, goal_marker_pub;
+            ros::Subscriber pose_sub;
+            ros::NodeHandle nh_;
+            int marker_id_cnt;
     };
 
 };
