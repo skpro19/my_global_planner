@@ -50,8 +50,8 @@ namespace global_planner {
         struct RRT_Cell{
 
             Point point;
-            RRT_Cell* next_cell;
-            RRT_Cell *prev_cell;
+            RRT_Cell* parent;
+            
             
         };
 
@@ -76,10 +76,13 @@ namespace global_planner {
             bool print_cell(const Cell &cell);
             bool make_straight_plan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan);
             void print_world_params(const geometry_msgs::PoseStamped &start, const geometry_msgs::PoseStamped &goal, __uint32_t &mx_i, __uint32_t &my_i, __uint32_t &mx_f, __uint32_t &my_f);
-            Point generate_next_goal();
+            Point generate_next_goal(const Point &last_pose);
             bool makePlanOne(const geometry_msgs::PoseStamped& start,const geometry_msgs::PoseStamped& goal,std::vector<geometry_msgs::PoseStamped>& plan);
             void update_map_bounds();
             RRT_Cell* get_next_best_cell(const Point &curr_point, RRT_Cell* head_cell);
+            bool RRT_path_so_far(RRT_Cell *head);
+            void publish_marker_point(const Point &pt);
+            void update_RRT_path_points(std::vector<Point> &path_points, RRT_Cell* head_cell);
 
 
             costmap_2d::Costmap2D* costmap_ros_;
