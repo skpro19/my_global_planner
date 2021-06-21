@@ -83,6 +83,8 @@ namespace global_planner {
             void update_RRT_path_points(std::vector<Point> &path_points, RRT_Cell* final_cell);
             void update_RRT_planner_plan(std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal, const std::vector<Point> &path_points);
             bool check_cell_neighbour(const Point &pt);
+            bool is_point_reachable(const Point &last_point, const Point &curr_point, __uint32_t step_sz, __uint32_t &mx_c, __uint32_t &my_c);
+
 
 
             costmap_2d::Costmap2D* costmap_ros_;
