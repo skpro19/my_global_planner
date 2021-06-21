@@ -262,7 +262,7 @@ namespace global_planner {
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
 
-    marker.lifetime = (flag==1) ? ros::Duration(10.0) : ros::Duration(3.0);
+    marker.lifetime = (flag==1) ? ros::Duration() : ros::Duration(3.0);
 
     marker.scale.x = (flag == 1) ? 0.5 : 0.25;
     marker.scale.y = (flag == 1) ? 0.5 : 0.25;
@@ -281,8 +281,9 @@ namespace global_planner {
     marker.pose.position.x = wx_;
     marker.pose.position.y = wy_;
     marker.pose.position.z = 1;
-          
-    goal_marker_pub.publish( marker );   
+
+
+    goal_marker_pub.publish( marker);   
 
   }
 
@@ -408,6 +409,8 @@ namespace global_planner {
 
   bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan ){
 
+    
+
     bool reached = false;
 
     __uint32_t mx_i, my_i, mx_f, my_f, mx_c, my_c;
@@ -425,6 +428,8 @@ namespace global_planner {
     while(true) {
 
       Point nxt_pt = generate_next_goal();
+      last_marker_id_cnt = marker_id_cnt;
+
       
       RRT_Cell* best_cell = get_closest_cell(nxt_pt, head_cell);
       Point best_pt = best_cell->point;
@@ -489,9 +494,6 @@ namespace global_planner {
       cout << "Something is wrong! ---- Could not reach near the goal!" << endl;
 
     }
-
-    
-
 
     return true;
 
