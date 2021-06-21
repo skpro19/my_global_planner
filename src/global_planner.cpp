@@ -159,38 +159,15 @@ namespace global_planner {
   
   GlobalPlanner::Point GlobalPlanner::generate_next_goal(){
 
-     
-
-      std_msgs::ColorRGBA blue;
-      blue.r = 0;
-      blue.g = 0;
-      blue.b = 1.0;
-      blue.a = 1.0;
-      std_msgs::ColorRGBA red;
-      red.r = 1.0;
-      red.g = 0;
-      red.b = 0;
-      red.a = 1.0;
-      std_msgs::ColorRGBA green;
-      green.r = 0;
-      green.g = 1.0;
-      green.b = 0;
-      green.a = 1.0;
-
       Point nxt_point = {};
 
       bool point_found = true;
 
-
-
       while(true) {
 
-        bool obs_found = 0 ;
-
+   
         __uint32_t mx_ , my_, mx_i, my_i;
-        double wx_, wy_;
-
-       
+        
         mx_= rand() % (map_xf - map_xi + 1) + (map_xi);
         my_= rand() % (map_yf - map_yi + 1) + (map_yi);
        
@@ -201,70 +178,14 @@ namespace global_planner {
 
         }
 
-        costmap_ros_->mapToWorld(mx_, my_, wx_, wy_);
-
-        visualization_msgs::Marker marker;
-        marker.header.frame_id = "map";
-        marker.header.stamp = ros::Time();
-        marker.ns = nh_.getNamespace();
-
-        marker.id = marker_id_cnt++;
-
-        marker.type = visualization_msgs::Marker::CUBE;
-        marker.action = visualization_msgs::Marker::ADD;
-        
-        marker.pose.position.x = wx_;
-        marker.pose.position.y = wy_;
-        marker.pose.position.z = 1;
-        marker.pose.orientation.x = 0.0;
-        marker.pose.orientation.y = 0.0;
-        marker.pose.orientation.z = 0.0;
-        marker.pose.orientation.w = 1.0;
-
-        marker.lifetime = ros::Duration(5.0);
-
-        marker.scale.x = 0.5;
-        marker.scale.y = 0.5;
-        marker.scale.z = 0.5;
-        
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        
-        marker.color = green;
-
-        //unsigned char cell_cost = costmap_ros_->getCost(mx_, my_);
+        unsigned char cell_cost = costmap_ros_->getCost(mx_, my_);
         
         bool flag = check_cell_neighbour(Point{mx_, my_});
 
+        if(!flag) {continue;}
 
-        /*if(cell_cost == costmap_2d::LETHAL_OBSTACLE) { 
-
-          obs_found = 1;  
-          cout << "Point lies on an obstacle!" << endl;
-          marker.color = red;
-          marker.scale.x = 0.5; 
-          marker.scale.y = 0.5;
-          goal_marker_pub.publish(marker);
-          continue;
-
-        }*/
-
-        if(!flag) {
-          
-          obs_found = 1;  
-          cout << "Point lies on an obstacle!" << endl;
-          marker.color = red;
-          marker.scale.x = 0.5; 
-          marker.scale.y = 0.5;
-          //goal_marker_pub.publish(marker);
-          continue;
-
-
-        }
-                
-        //goal_marker_pub.publish( marker );        
-
+        publish_marker_point(Point{mx_, my_}, -1);
         
-        point_found = true;    
         nxt_point = Point{mx_, my_};
         return nxt_point;
         
@@ -311,7 +232,7 @@ namespace global_planner {
       
   }
 
-  void GlobalPlanner::publish_marker_point(const Point &curr_pt) {
+  void GlobalPlanner::publish_marker_point(const Point &curr_pt, int flag) {
 
     std_msgs::ColorRGBA blue;
     blue.r = 0;
@@ -341,15 +262,15 @@ namespace global_planner {
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
 
-    marker.lifetime = ros::Duration(5.0);
+    marker.lifetime = (flag==1) ? ros::Duration(10.0) : ros::Duration(3.0);
 
-    marker.scale.x = 0.5;
-    marker.scale.y = 0.5;
-    marker.scale.z = 0.5;
+    marker.scale.x = (flag == 1) ? 0.5 : 0.25;
+    marker.scale.y = (flag == 1) ? 0.5 : 0.25;
+    marker.scale.z = (flag == 1) ? 0.5 : 0.25;
     
     marker.color.a = 1.0; // Don't forget to set the alpha!
     
-    marker.color = green;
+    marker.color = (flag == 1) ? green: blue;
 
     marker.id = marker_id_cnt++;
     marker.header.stamp = ros::Time();
@@ -373,7 +294,7 @@ namespace global_planner {
       
       Point curr_pt = final_cell->point;
     
-      publish_marker_point(curr_pt);
+      publish_marker_point(curr_pt, 1);
       
       path_points.push_back(curr_pt);
        

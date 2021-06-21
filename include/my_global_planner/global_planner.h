@@ -79,7 +79,7 @@ namespace global_planner {
             void update_map_bounds();
             RRT_Cell* get_closest_cell(const Point &nxt_pt, RRT_Cell* head_cell);
             bool RRT_path_so_far(RRT_Cell *head);
-            void publish_marker_point(const Point &pt);
+            void publish_marker_point(const Point &pt, int flag);
             void update_RRT_path_points(std::vector<Point> &path_points, RRT_Cell* final_cell);
             void update_RRT_planner_plan(std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal, const std::vector<Point> &path_points);
             bool check_cell_neighbour(const Point &pt);
