@@ -30,16 +30,29 @@ namespace global_planner {
                 
                 bool operator<(const Point &p1 ) const{    return ((p1.x < x) || (p1.x == x && p1.y < y) ) ;  }   
 
+            };
+
+        
+        struct Cell {
+
+            Point point; 
+            __uint32_t cost_till_now;
+
+            bool operator<(const Cell &c1) const {
+                
+                
+                return (c1.cost_till_now < cost_till_now || (c1.cost_till_now == cost_till_now && c1.point < point));
+
+            }
+        
         };
 
-        
-        struct rrt_star_cell{
+        struct RRT_Cell{
 
             Point point;
-            rrt_star_cell* parent;
-            __uint32_t cost_till_now;
-            int id;
-        
+            RRT_Cell* parent;
+            std::vector<RRT_Cell*> children;
+            
         };
 
 
@@ -60,21 +73,20 @@ namespace global_planner {
             double heu(Point p1, Point p2);
             void update_planner_plan(std::vector<Point> &path_points, std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal); 
             void publish_global_path(const std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal);
+            bool print_cell(const Cell &cell);
             void print_world_params(const geometry_msgs::PoseStamped &start, const geometry_msgs::PoseStamped &goal, __uint32_t &mx_i, __uint32_t &my_i, __uint32_t &mx_f, __uint32_t &my_f);
             Point generate_next_goal();
             void update_map_bounds();
-            rrt_star_cell* get_closest_cell(const Point &nxt_pt, rrt_star_cell* head_cell);
+            RRT_Cell* get_closest_cell(const Point &nxt_pt, RRT_Cell* head_cell);
+            bool RRT_path_so_far(RRT_Cell *head);
             void publish_marker_point(const Point &pt, int flag);
-            void update_rrt_star_path_points(std::vector<Point> &path_points, rrt_star_cell *final_cell);
-            void update_rrt_star_planner_plan(std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal, const std::vector<Point> &path_points);
+            void update_RRT_path_points(std::vector<Point> &path_points, RRT_Cell* final_cell);
+            void update_RRT_planner_plan(std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal, const std::vector<Point> &path_points);
             bool check_cell_neighbour(const Point &pt);
-            bool is_point_reachable(const Point &last_point, const Point &curr_point, __uint32_t step_sz = __uint32_t(1));
-            bool add_cell_to_tree(rrt_star_cell* curr_cell);
-            void update_tree_connections(rrt_star_cell* curr_cell);
-            __uint32_t get_cost_between_points(const Point &p1 , const Point &p2);
+            bool is_point_reachable(const Point &last_point, const Point &curr_point, __uint32_t step_sz, __uint32_t &mx_c, __uint32_t &my_c);
+            
 
 
-            std::vector<rrt_star_cell*> rrt_tree;
             costmap_2d::Costmap2D* costmap_ros_;
             costmap_2d::Costmap2DROS *my_costmap_ros;
             __uint32_t size_x, size_y;
