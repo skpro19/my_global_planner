@@ -63,14 +63,15 @@ namespace global_planner {
             void print_world_params(const geometry_msgs::PoseStamped &start, const geometry_msgs::PoseStamped &goal, __uint32_t &mx_i, __uint32_t &my_i, __uint32_t &mx_f, __uint32_t &my_f);
             Point generate_next_goal();
             void update_map_bounds();
-            rrt_star_cell* get_closest_cell(const Point &nxt_pt, rrt_star_cell* head_cell);
+            rrt_star_cell* get_closest_cell(const Point &nxt_pt);
             void publish_marker_point(const Point &pt, int flag);
             void update_rrt_star_path_points(std::vector<Point> &path_points, rrt_star_cell *final_cell);
             void update_rrt_star_planner_plan(std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal, const std::vector<Point> &path_points);
-            bool check_cell_neighbour(const Point &pt);
-            bool is_point_reachable(const Point &last_point, const Point &curr_point, __uint32_t step_sz = __uint32_t(1));
-            bool add_cell_to_tree(rrt_star_cell* curr_cell);
-            void update_tree_connections(rrt_star_cell* curr_cell);
+            bool check_cell_neighbour(const Point &pt, int margin_sz = 5);
+            bool is_point_reachable(const Point &last_point, const Point &curr_point, __uint32_t dis_r);
+            bool add_cell_to_tree(rrt_star_cell* curr_cell, __uint32_t search_r);
+            bool is_point_reachable_with_cost(const Point &best_pt, const Point &nxt_pt, __uint32_t dis_r, __uint32_t &cost);
+            void update_tree_connections(rrt_star_cell* curr_cell, __uint32_t search_r);
             __uint32_t get_cost_between_points(const Point &p1 , const Point &p2);
 
 
