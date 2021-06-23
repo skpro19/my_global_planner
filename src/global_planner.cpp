@@ -456,7 +456,6 @@ namespace global_planner {
     
     cout <<"Inside the add_cell_to_tree function!" << endl;
     
-
     __uint32_t mn_cost = UINT32_MAX;
 
     Point curr_point = curr_cell->point;
@@ -470,13 +469,23 @@ namespace global_planner {
       double dis = heu(p, curr_point);
       double ang_ = atan2(curr_point.y - p.y, curr_point.x - p.x);
 
-      if(dis > search_r) {continue;}
+      if(dis > search_r) {
+        
+        cout << "Case One!" << endl;
+        continue;
+        
+      }
 
       __uint32_t curr_cost = 0 ;
 
       bool is_reachable = is_point_reachable_with_cost(curr_point, rrt_tree[i]->point, dis, curr_cost);
 
-      if(!is_reachable) {continue;}
+      if(!is_reachable) {
+        
+        cout << "Case Two!" << endl;
+        continue;
+        
+      }
 
       curr_cost = curr_cost + rrt_tree[i]->cost_till_now;
 
@@ -598,42 +607,38 @@ namespace global_planner {
       Point nxt_pt = generate_next_goal();
       
       rrt_star_cell* best_cell = get_closest_cell(nxt_pt);
-      
-      Point best_pt = best_cell->point;
 
       rrt_star_cell* best_goal_cell = get_closest_cell(Point{mx_f, my_f});
 
-      double dis_from_goal = heu(Point{mx_f, my_f}, best_goal_cell->point);
+      double dis_ = heu(Point{mx_f, my_f}, best_goal_cell->point);
 
-      if(dis_from_goal < 6) {
+      if(dis_ < 20) {
 
-        cout << "dis_from_goal < 6 --- Sleeping for 5 seconds!" << endl;
-        ros::Duration(5.0).sleep();
-
-        if(is_point_reachable(best_goal_cell->point, Point{mx_f, my_f}, dis_from_goal)) {
-
-          rrt_star_cell* final_cell = new rrt_star_cell();
-          final_cell->parent = best_goal_cell;
-          final_cell->point= Point{mx_f, my_f};
-
-          update_rrt_star_path_points(path_points, final_cell);
-          update_rrt_star_planner_plan(plan, goal, path_points);
-          publish_global_path(plan, goal);
-
-          reached = true;
-          break;
-
-        }
+        cout << "Almost reached the goal!" << endl;
+        ros::Duration(4.0).sleep();
+        return true;
 
       }
+
+      Point best_pt = best_cell->point;
+
+
+      publish_marker_point(best_pt, 1);
 
       __uint32_t dis_r = 30;
 
       bool valid_pt = is_point_reachable(best_pt, nxt_pt, dis_r);
+
+      cout << "valid_pt: " << valid_pt << endl;
       
       cout << "is_point_reachable: " << valid_pt << endl;
 
-      if(!valid_pt) {continue;}
+      if(!valid_pt) {
+
+        cout << "Case 3!" << endl;
+        continue;
+
+      }
       
       rrt_star_cell* latest_cell = new rrt_star_cell();
       
@@ -648,6 +653,10 @@ namespace global_planner {
       __uint32_t search_r = 60;
 
       bool add_flag = add_cell_to_tree(latest_cell, search_r);
+      cout  << "add_flag: " << add_flag << endl;
+
+      cout <<"best_pt: (" << best_cell->point.x << "," << best_cell->point.y << ")" << endl;
+      ros::Duration(1.0).sleep();
       
       if(!add_flag) {
 
@@ -662,6 +671,13 @@ namespace global_planner {
       
       update_tree_connections(latest_cell, search_r);
 
+      cout << "latest_point: (:" << latest_cell->point.x << "," << latest_cell->point.y <<")" << endl;
+      cout << "rrt_tree.size(): " << rrt_tree.size() << endl;
+      cout << "dis_from_goal: " << heu(Point{mx_f, my_f}, latest_cell->point) << endl;
+      
+      publish_marker_point(latest_cell->point, 1);
+
+      
 
     }
 
