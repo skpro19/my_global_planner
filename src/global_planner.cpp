@@ -428,37 +428,40 @@ namespace global_planner {
     while(true) {
 
       Point nxt_pt = generate_next_goal();
-      last_marker_id_cnt = marker_id_cnt;
+      //last_marker_id_cnt = marker_id_cnt;
 
       
       RRT_Cell* best_cell = get_closest_cell(nxt_pt, head_cell);
       Point best_pt = best_cell->point;
       
-      double dis_from_goal = heu(nxt_pt, Point{mx_f, my_f});
+      RRT_Cell* best_goal_cell = get_closest_cell(Point{mx_f, my_f}, head_cell);
+
+      //double dis_from_goal = heu(nxt_pt, Point{mx_f, my_f});
+      double dis_from_goal = heu(Point{mx_f, my_f}, best_goal_cell->point);
 
       if(dis_from_goal < 6) {
         
         
         cout << "Almost reached the goal!" <<endl;
         cout <<"dis_from_goal: " << dis_from_goal << endl;
-        cout <<"Sleeping for 2 seconds!" << endl;
-        ros::Duration(2.0).sleep();
+        //cout <<"Sleeping for 2 seconds!" << endl;
+        //ros::Duration(2.0).sleep();
 
-        if(is_point_reachable(best_pt, Point{mx_f, my_f}, (__uint32_t)dis_from_goal, mx_c, my_c)) {
+        if(is_point_reachable(best_goal_cell->point, Point{mx_f, my_f}, (__uint32_t)dis_from_goal, mx_c, my_c)) {
 
           RRT_Cell* final_cell = new RRT_Cell();
-        final_cell->point = Point{mx_f, my_f};
-        final_cell->parent = best_cell;  
-        best_cell->children.push_back(final_cell);
+          final_cell->point = Point{mx_f, my_f};
+          final_cell->parent = best_goal_cell;  
+          best_goal_cell->children.push_back(final_cell);
 
-        update_RRT_path_points(path_points, final_cell);
-        reverse(path_points.begin(), path_points.end());
-        update_RRT_planner_plan(plan, goal, path_points);
-        publish_global_path(plan, goal);
+          update_RRT_path_points(path_points, final_cell);
+          reverse(path_points.begin(), path_points.end());
+          update_RRT_planner_plan(plan, goal, path_points);
+          publish_global_path(plan, goal);
 
 
-        reached = true;
-        break;
+          reached = true;
+          break;
 
         }
 
