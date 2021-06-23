@@ -604,15 +604,16 @@ namespace global_planner {
     while(true) {
       
       cnt++;
+
       Point nxt_pt = generate_next_goal();
       
       rrt_star_cell* best_cell = get_closest_cell(nxt_pt);
-
+      
       rrt_star_cell* best_goal_cell = get_closest_cell(Point{mx_f, my_f});
 
       double dis_ = heu(Point{mx_f, my_f}, best_goal_cell->point);
 
-      if(dis_ < 20) {
+      if(dis_ < 30) {
 
         cout << "Almost reached the goal!" << endl;
         ros::Duration(4.0).sleep();
@@ -621,11 +622,10 @@ namespace global_planner {
       }
 
       Point best_pt = best_cell->point;
+      
+      //publish_marker_point(best_pt, 1);
 
-
-      publish_marker_point(best_pt, 1);
-
-      __uint32_t dis_r = 30;
+      __uint32_t dis_r = 15;
 
       bool valid_pt = is_point_reachable(best_pt, nxt_pt, dis_r);
 
@@ -639,42 +639,41 @@ namespace global_planner {
         continue;
 
       }
-      
+
       rrt_star_cell* latest_cell = new rrt_star_cell();
       
       double dis = heu(best_pt, nxt_pt);
       double ang_ = atan2(nxt_pt.y - best_pt.y , nxt_pt.x - best_pt.x);
 
-      mx_c = mx_c + dis_r * cos(ang_);
-      my_c = my_c + dis_r * sin(ang_);
+      mx_c = best_cell->point.x + dis_r * cos(ang_);
+      my_c = best_cell->point.y + dis_r * sin(ang_);
       
       latest_cell->point = Point{mx_c, my_c};
+      latest_cell->parent = best_cell;
+
+      rrt_tree.push_back(latest_cell);
+
+      //__uint32_t search_r = 60;
+
+      //bool add_flag = add_cell_to_tree(latest_cell, search_r);
+      //cout  << "add_flag: " << add_flag << endl;
+
+      //cout <<"best_pt: (" << best_cell->point.x << "," << best_cell->point.y << ")" << endl;
+      ////ros::Duration(1.0).sleep();
       
-      __uint32_t search_r = 60;
+      //if(!add_flag) {
 
-      bool add_flag = add_cell_to_tree(latest_cell, search_r);
-      cout  << "add_flag: " << add_flag << endl;
-
-      cout <<"best_pt: (" << best_cell->point.x << "," << best_cell->point.y << ")" << endl;
-      ros::Duration(1.0).sleep();
-      
-      if(!add_flag) {
-
-        cout <<"Something might be wrong --- add_cell_to_tree returned false!" << endl;
+        //cout <<"Something might be wrong --- add_cell_to_tree returned false!" << endl;
         //cout << "Sleeping for 4 seconds!" << endl;
         //ros::Duration(4.0).sleep();
 
-        continue;
+        //continue;
 
-      }
+      //}
 
       
-      update_tree_connections(latest_cell, search_r);
+      //update_tree_connections(latest_cell, search_r);
 
-      cout << "latest_point: (:" << latest_cell->point.x << "," << latest_cell->point.y <<")" << endl;
-      cout << "rrt_tree.size(): " << rrt_tree.size() << endl;
-      cout << "dis_from_goal: " << heu(Point{mx_f, my_f}, latest_cell->point) << endl;
-      
       publish_marker_point(latest_cell->point, 1);
 
       
