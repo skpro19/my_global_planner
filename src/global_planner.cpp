@@ -600,33 +600,31 @@ namespace global_planner {
       rrt_star_cell* best_cell = get_closest_cell(nxt_pt);
       
       Point best_pt = best_cell->point;
-      
-      double dis_from_goal = heu(nxt_pt, Point{mx_f, my_f});
+
+      rrt_star_cell* best_goal_cell = get_closest_cell(Point{mx_f, my_f});
+
+      double dis_from_goal = heu(Point{mx_f, my_f}, best_goal_cell->point);
 
       if(dis_from_goal < 6) {
-        
-        
-        cout << "Almost reached the goal!" <<endl;
-        cout <<"dis_from_goal: " << dis_from_goal << endl;
-        cout <<"Sleeping for 2 seconds!" << endl;
-        ros::Duration(2.0).sleep();
 
-        if(is_point_reachable(best_pt, Point{mx_f, my_f},dis_from_goal)) {
+        cout << "dis_from_goal < 6 --- Sleeping for 5 seconds!" << endl;
+        ros::Duration(5.0).sleep();
+
+        if(is_point_reachable(best_goal_cell->point, Point{mx_f, my_f}, dis_from_goal)) {
 
           rrt_star_cell* final_cell = new rrt_star_cell();
+          final_cell->parent = best_goal_cell;
+          final_cell->point= Point{mx_f, my_f};
 
-          final_cell->point = Point{mx_f, my_f};
-          final_cell->parent = best_cell;  
-          
           update_rrt_star_path_points(path_points, final_cell);
-          reverse(path_points.begin(), path_points.end());
           update_rrt_star_planner_plan(plan, goal, path_points);
           publish_global_path(plan, goal);
 
           reached = true;
           break;
+
         }
-        
+
       }
 
       __uint32_t dis_r = 30;
@@ -657,13 +655,14 @@ namespace global_planner {
         //cout << "Sleeping for 4 seconds!" << endl;
         //ros::Duration(4.0).sleep();
 
-        //continue;
+        continue;
 
       }
 
       
       update_tree_connections(latest_cell, search_r);
-      
+
+
     }
 
     cout <<"reached: " << reached << endl;
