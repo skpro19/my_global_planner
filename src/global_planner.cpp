@@ -248,10 +248,6 @@ namespace global_planner {
 
     std_msgs::ColorRGBA col_arr[10];
 
-    col_arr[0] = col_arr[3] = col_arr[6] = col_arr[9] = blue; 
-    col_arr[1] = col_arr[4] = col_arr[7] = red;
-    col_arr[2] = col_arr[5] = col_arr[8] = green;
-
     visualization_msgs::Marker marker;
     marker.header.frame_id = "map";
     marker.ns = nh_.getNamespace();
@@ -264,16 +260,25 @@ namespace global_planner {
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
 
-    marker.lifetime = (flag==1) ? ros::Duration() : ros::Duration(3.0);
+    marker.lifetime = (flag == -1) ? ros::Duration(1.0) : ros::Duration();
 
-    marker.scale.x = (flag == 1) ? 0.5 : 0.25;
-    marker.scale.y = (flag == 1) ? 0.5 : 0.25;
-    marker.scale.z = (flag == 1) ? 0.5 : 0.25;
+    marker.scale.x = 1;
+    marker.scale.y =1 ;
+    marker.scale.z = 1;
+
+    if(flag == 2) {
+
+      marker.scale.x = 0.5;
+      marker.scale.y = 0.5;
+
+    }
     
     marker.color.a = 1.0; // Don't forget to set the alpha!
     
-    marker.color = (flag == -1 ? blue: col_arr[(rand() % (9 - 0 + 1)) + 0]);
-        
+    //marker.color = (flag == -1 ? blue: col_arr[(rand() % (9 - 0 + 1)) + 0]);
+    if(flag == 0 || flag == 2) {marker.color = red;}
+    else if(flag == 1) {marker.color = green;}
+    else if(flag == -1 ) {marker.color=  blue;}  
 
     marker.id = marker_id_cnt++;
     marker.header.stamp = ros::Time();
@@ -578,8 +583,6 @@ namespace global_planner {
 
   bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan ){
 
-    
-
     bool reached = false;
     rrt_tree.clear();
     rrt_tree.resize(0);
@@ -591,6 +594,7 @@ namespace global_planner {
     mx_c = mx_i, my_c = my_i;
 
     rrt_star_cell* head_cell = new rrt_star_cell();
+    
     head_cell->point = Point{mx_i, my_i};
     head_cell->parent = nullptr;
     head_cell->cost_till_now = 0 ;
@@ -599,105 +603,18 @@ namespace global_planner {
     rrt_tree.push_back(head_cell);
 
     vector<Point> path_points;
+    
     int cnt =0 ; 
 
-    while(true) {
-      
-      cnt++;
-
-      Point nxt_pt = generate_next_goal();
-      
-      rrt_star_cell* best_cell = get_closest_cell(nxt_pt);
-      
-      rrt_star_cell* best_goal_cell = get_closest_cell(Point{mx_f, my_f});
-
-      double dis_ = heu(Point{mx_f, my_f}, best_goal_cell->point);
-
-      if(dis_ < 30) {
-
-        cout << "Almost reached the goal!" << endl;
-        ros::Duration(4.0).sleep();
-        return true;
-
-      }
-
-      Point best_pt = best_cell->point;
-      
-      //publish_marker_point(best_pt, 1);
-
-      __uint32_t dis_r = 15;
-
-      bool valid_pt = is_point_reachable(best_pt, nxt_pt, dis_r);
-
-      cout << "valid_pt: " << valid_pt << endl;
-      
-      cout << "is_point_reachable: " << valid_pt << endl;
-
-      if(!valid_pt) {
-
-        cout << "Case 3!" << endl;
-        continue;
-
-      }
-
-      rrt_star_cell* latest_cell = new rrt_star_cell();
-      
-      double dis = heu(best_pt, nxt_pt);
-      double ang_ = atan2(nxt_pt.y - best_pt.y , nxt_pt.x - best_pt.x);
-
-      mx_c = best_cell->point.x + dis_r * cos(ang_);
-      my_c = best_cell->point.y + dis_r * sin(ang_);
-      
-      latest_cell->point = Point{mx_c, my_c};
-      latest_cell->parent = best_cell;
-
-      rrt_tree.push_back(latest_cell);
-
-      //__uint32_t search_r = 60;
-
-      //bool add_flag = add_cell_to_tree(latest_cell, search_r);
-      //cout  << "add_flag: " << add_flag << endl;
-
-      //cout <<"best_pt: (" << best_cell->point.x << "," << best_cell->point.y << ")" << endl;
-      ////ros::Duration(1.0).sleep();
-      
-      //if(!add_flag) {
-
-        //cout <<"Something might be wrong --- add_cell_to_tree returned false!" << endl;
-        //cout << "Sleeping for 4 seconds!" << endl;
-        //ros::Duration(4.0).sleep();
-
-        //continue;
-
-      //}
-
-      
-      //update_tree_connections(latest_cell, search_r);
-
-      publish_marker_point(latest_cell->point, 1);
+    while(true){
 
       
 
-    }
 
-    cout <<"reached: " << reached << endl;
-    
-    if(!reached) {
 
-      cout << "Something is wrong! ---- Could not reach near the goal!" << endl;
-      cout << "Sleeping for 3 seconds!" << endl;
-      ros::Duration(3.0).sleep();
-
-    }
-
-    
-
-    return true;
-
+    }  
+  
   }
-  
-  
-
 
 
 };
