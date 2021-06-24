@@ -250,6 +250,12 @@ namespace global_planner {
     green.b = 0;
     green.a = 1.0;
 
+    std_msgs::ColorRGBA col_arr[10];
+
+    col_arr[0] = col_arr[3] = col_arr[6] = col_arr[9] = blue; 
+    col_arr[1] = col_arr[4] = col_arr[7] = red;
+    col_arr[2] = col_arr[5] = col_arr[8] = green;
+
     visualization_msgs::Marker marker;
     marker.header.frame_id = "map";
     marker.ns = nh_.getNamespace();
@@ -270,7 +276,8 @@ namespace global_planner {
     
     marker.color.a = 1.0; // Don't forget to set the alpha!
     
-    marker.color = (flag == 1) ? green: blue;
+    marker.color = (flag == -1 ? blue: col_arr[(rand() % (9 - 0 + 1)) + 0]);
+        
 
     marker.id = marker_id_cnt++;
     marker.header.stamp = ros::Time();
