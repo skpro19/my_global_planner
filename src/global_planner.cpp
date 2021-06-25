@@ -466,27 +466,44 @@ namespace global_planner {
 
       }
 
-      int dis_r = 30; 
+      int dis_r = 60; 
 
       double dis_ = heu(best_cell->point, nxt_pt);
 
-      dis_r = min(dis_r , (int)dis_ + 1);
+      //dis_r = min(dis_r , (int)dis_ + 1);
 
-      bool reachable_ = is_point_reachable(best_cell->point, nxt_pt, dis_r);
+      //bool reachable_ = is_point_reachable(best_cell->point, nxt_pt, dis_r);
+
+      bool reachable_ = true;
+
+      int step_sz = 1; 
+
+      int num_steps = dis_r/step_sz + 1; 
+
+      double ang_ = atan2(nxt_pt.y - best_cell->point.y, nxt_pt.x - best_cell->point.x);
+
+      while(num_steps > 0) {
+
+        int mx_c = best_cell->point.x + num_steps * dis_r * cos(ang_);
+        int my_c = best_cell->point.y + num_steps * dis_r * sin(ang_);
+
+        reachable_ = check_cell_neighbour(Point{(__uint32_t)mx_c, (__uint32_t)my_c});
+
+        if(!reachable_) {break;}
+
+        num_steps--;
+      
+      }
 
       if(!reachable_) {continue;}
 
-      rrt_star_cell* latest_cell = new rrt_star_cell();
-
-      double ang_ = atan2(nxt_pt.y - best_cell->point.y,  nxt_pt.x - best_cell->point.x);
-      
       Point latest_pt = {best_cell->point.x + int(dis_r * cos(ang_)) , best_cell->point.y + int(dis_r * sin(ang_))}; 
 
-      //publish_marker_point(latest_pt, 1);
-
+      publish_marker_point(latest_pt, 1);
+      rrt_star_cell* latest_cell = new rrt_star_cell();
       latest_cell->point = latest_pt; 
       latest_cell->parent = best_cell;
-
+      ros::Duration(1.0).sleep();
       rrt_tree.push_back(latest_cell);
     
     }
