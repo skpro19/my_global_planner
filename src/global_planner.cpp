@@ -200,7 +200,7 @@ namespace global_planner {
   }
 
 
-  GlobalPlanner::RRT_Cell* GlobalPlanner::get_closest_cell(const Point &nxt_pt, RRT_Cell* head_cell) {
+  GlobalPlanner::RRT_Cell* GlobalPlanner::get_closest_cell(const Point &nxt_pt) {
       
       if(head_cell == nullptr) {return nullptr;} 
 
@@ -350,6 +350,63 @@ namespace global_planner {
 
 
   }
+
+  bool GlobalPlanner::is_point_reachable(const Point &best_pt, const Point &nxt_pt, __uint32_t step_sz, __uint32_t &mx_c , __uint32_t &my_c){
+
+      //__uint32_t step_sz = 20;
+
+      double dis = heu(best_pt, nxt_pt);
+
+      if((__uint32_t) dis < step_sz) {
+
+        step_sz = (__uint32_t)dis;
+
+      }
+
+      bool valid_pt= true;
+
+      //double dis = heu(nxt_pt, Point{best_pt.x, best_pt.y});
+
+      double sin_th = double((int)nxt_pt.y - (int)best_pt.y) / dis;
+      double cos_th = double((int)nxt_pt.x - (int)best_pt.x) / dis;
+      
+
+      for(int i = 0; i <= step_sz; i++) {
+
+        __uint32_t mx_d = (int)best_pt.x + i * cos_th;
+        __uint32_t my_d = (int)best_pt.y+ i* sin_th;
+
+        if(mx_d <= map_xi || mx_d >= map_xf || my_d <= map_yi || my_d >= map_yf) {
+
+          valid_pt = false;
+          break;
+
+        }
+
+        bool flag = check_cell_neighbour(Point{mx_d, my_d});
+
+        if(!flag){
+
+          valid_pt = false;
+          break;
+          
+        }
+
+      }
+
+      if(valid_pt){
+
+
+        mx_c = best_pt.x + step_sz * cos_th;
+        my_c = best_pt.y + step_sz * sin_th;
+
+
+      }
+
+      return valid_pt;
+
+  }
+
 
   bool GlobalPlanner::is_point_reachable(const Point &best_pt, const Point &nxt_pt, __uint32_t step_sz, __uint32_t &mx_c , __uint32_t &my_c){
 

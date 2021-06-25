@@ -74,7 +74,7 @@ namespace global_planner {
             void update_tree_connections(rrt_star_cell* curr_cell, __uint32_t search_r);
             __uint32_t get_cost_between_points(const Point &p1 , const Point &p2);
             bool connect_node_to_tree(rrt_star_cell* final_cell, int search_r);
-            bool old_is_point_reachable(const Point &best_pt, const Point &nxt_pt, __uint32_t step_sz, __uint32_t &mx_c , __uint32_t &my_c);
+            bool is_point_reachable(const Point &best_pt, const Point &nxt_pt, __uint32_t step_sz, __uint32_t &mx_c , __uint32_t &my_c);
 
 
             std::vector<rrt_star_cell*> rrt_tree;
