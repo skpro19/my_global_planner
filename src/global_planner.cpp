@@ -453,7 +453,7 @@ namespace global_planner {
       double dis_from_best_cell = heu(best_cell->point, nxt_pt);
       double dis_from_goal = heu(Point{mx_f, my_c}, best_goal_cell->point);
 
-      if(dis_from_goal < 20) {
+      if(best_goal_cell != nullptr && dis_from_goal < 20) {
         
         reached = true; 
 
