@@ -248,6 +248,7 @@ namespace global_planner {
   GlobalPlanner::rrt_star_cell* GlobalPlanner::get_closest_cell(const GlobalPlanner::Point &nxt_pt, int dis_r) {
       
       long double mn_dis = std::numeric_limits<int>::max();  
+      
       rrt_star_cell* best_cell = nullptr;
 
       for(int i = 0; i < (int)rrt_tree.size(); i++) {
@@ -505,7 +506,14 @@ namespace global_planner {
 
       rrt_star_cell* best_cell = get_closest_cell(nxt_pt, dis_r);
 
-      if(best_cell == nullptr) {continue;}
+      if(best_cell == nullptr) {
+        
+        cout << "Inside the makePlan function --- best_cell was nullptr" << endl;
+        continue;
+
+      }
+
+      cout << "HI" << endl;
 
       //publish_marker_point(best_cell->point, 0);
 
@@ -514,7 +522,7 @@ namespace global_planner {
       double dis_from_best_cell = heu(best_cell->point, nxt_pt);
       double dis_from_goal = heu(Point{mx_f, my_c}, best_goal_cell->point);
 
-      if(dis_from_goal < 20) {
+      if(best_goal_cell != nullptr && dis_from_goal < 20) {
         
         reached = true; 
 
