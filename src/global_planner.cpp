@@ -471,6 +471,57 @@ namespace global_planner {
     
   }
 
+  void GlobalPlanner::update_tree_connections(rrt_star_cell* last_cell, int search_r) {
+
+      for(int i= 0; i < (int)rrt_tree.size(); i++) {
+
+        double dis_ = heu(last_cell->point, rrt_tree[i]->point);
+
+        if(dis_ > search_r) {continue;}
+
+        search_r = min(search_r, (int)dis_);
+
+        bool is_reachable = is_point_reachable(last_cell->point, rrt_tree[i]->point, search_r);
+
+        if(!is_reachable){continue;}
+        
+        double ang_ = atan2((int)last_cell->point.y - (int)rrt_tree[i]->point.y  ,  (int)last_cell->point.x -(int)rrt_tree[i]->point.x);
+        
+        int step_sz = 1;
+
+        int num_steps = (search_r/step_sz) + 1;
+
+        int cost = last_cell->cost_till_now; 
+
+        int mx_c = last_cell->point.x , my_c = last_cell->point.y;
+
+        while(num_steps > 0) {
+          
+          int mx_d = mx_c + (num_steps * step_sz * cos(ang_));
+
+          int my_d = my_c + (num_steps * step_sz * sin(ang_));
+
+          unsigned int cell_cost = costmap_ros_->getCost(mx_d, my_d);
+
+          cost = cost + 1 + (int)cell_cost;
+
+          num_steps--;
+
+        }
+
+        int prev_cost = (int)rrt_tree[i]->cost_till_now;
+
+        if(prev_cost > cost) {
+
+          rrt_tree[i]->cost_till_now = cost;
+          rrt_tree[i]->parent = last_cell;
+        
+        }
+      
+      }
+
+
+  }
 
   bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan ){
     
@@ -587,8 +638,9 @@ namespace global_planner {
       latest_cell->point = Point{mx_c, my_c};
       latest_cell->parent = best_parent;
 
-      publish_marker_point(Point{mx_c, my_c}, -1, 0);
+      update_tree_connections(latest_cell, search_r);
 
+      publish_marker_point(Point{mx_c, my_c}, -1, 0);
 
       rrt_tree.push_back(latest_cell);
 
