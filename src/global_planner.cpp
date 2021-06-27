@@ -428,6 +428,8 @@ namespace global_planner {
 
       if(dis > search_r) {continue;}
 
+      dis = min((int)dis, search_r);
+
       bool is_reachable = is_point_reachable(last_cell->point, rrt_tree[i]->point, dis);
 
       cout << "i: " << i << " is_reachable: " << is_reachable << endl;
@@ -479,9 +481,9 @@ namespace global_planner {
 
         if(dis_ > search_r) {continue;}
 
-        search_r = min(search_r, (int)dis_);
+        dis_ = min(search_r, (int)dis_);
 
-        bool is_reachable = is_point_reachable(last_cell->point, rrt_tree[i]->point, search_r);
+        bool is_reachable = is_point_reachable(last_cell->point, rrt_tree[i]->point, dis_);
 
         if(!is_reachable){continue;}
         
@@ -523,6 +525,35 @@ namespace global_planner {
 
   }
 
+  void GlobalPlanner::update_cell_cost(rrt_star_cell* last_cell , rrt_star_cell* parent_cell) {
+
+    double dis_ = heu(last_cell->point, parent_cell->point);
+
+    int step_sz =1; 
+
+    int num_steps = - (dis_/num_steps) + 1; 
+
+    int cost = parent_cell->cost_till_now;
+
+    int mx_c = parent_cell->point.x , my_c = parent_cell->point.y;
+
+    double ang_ = atan2((int)last_cell->point.y - my_c, (int)last_cell->point.x - (int)mx_c);
+
+    while(num_steps > 0){
+
+        int mx_d = mx_c + (num_steps * step_sz * cos(ang_));
+        int my_d = my_c + (num_steps * step_sz * sin(ang_));
+
+        unsigned int curr_cost = costmap_ros_->getCost(mx_d, my_d);
+
+        cost = cost + 1 + curr_cost;
+        
+    }
+
+    last_cell->cost_till_now = cost;
+
+  }
+
   bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan ){
     
     bool reached = false;
@@ -537,6 +568,8 @@ namespace global_planner {
     rrt_star_cell* head_cell = new rrt_star_cell();
     head_cell->point = Point{mx_i, my_i};
     head_cell->parent = nullptr;
+    head_cell->cost_till_now = 0;
+
 
     rrt_tree.push_back(head_cell);
 
@@ -564,46 +597,50 @@ namespace global_planner {
 
       }
 
+      double dis_from_best_cell = heu(best_cell->point, nxt_pt);
+      
       cout << "HI" << endl;
 
       //publish_marker_point(best_cell->point, 0);
 
       rrt_star_cell* best_goal_cell = get_closest_cell(Point{mx_f, my_f}, dis_r);
 
-      double dis_from_best_cell = heu(best_cell->point, nxt_pt);
-      double dis_from_goal = heu(Point{mx_f, my_c}, best_goal_cell->point);
-
-      if(best_goal_cell != nullptr && dis_from_goal < 20) {
+      if(best_goal_cell != nullptr) {
         
-        reached = true; 
+        double dis_from_goal =  heu(Point{mx_f, my_f}, best_goal_cell->point);
 
-        rrt_star_cell* final_cell = new rrt_star_cell(); 
-        final_cell->parent = best_goal_cell;
-        final_cell->point = Point{mx_f, my_f};
-        rrt_tree.push_back(final_cell);
-        
+        if(dis_from_goal < 20) {
 
-        update_rrt_star_path_points(path_points, final_cell);
-        reverse(path_points.begin(), path_points.end());
-
-        update_rrt_star_planner_plan(plan, goal, path_points);
-        publish_global_path(plan, goal);
-        
-        for(int i =0; i < (int)path_points.size(); i++){
           
-          publish_marker_point(path_points[i], 1, 0);
+          reached = true; 
+
+          rrt_star_cell* final_cell = new rrt_star_cell(); 
+          final_cell->parent = best_goal_cell;
+          final_cell->point = Point{mx_f, my_f};
+          rrt_tree.push_back(final_cell);
+          
+
+          update_rrt_star_path_points(path_points, final_cell);
+          reverse(path_points.begin(), path_points.end());
+
+          update_rrt_star_planner_plan(plan, goal, path_points);
+          publish_global_path(plan, goal);
+          
+          for(int i =0; i < (int)path_points.size(); i++){
+            
+            publish_marker_point(path_points[i], 1, 0);
+
+          }
+
+          cout << "Almost reached the goal!" << endl;
+          ros::Duration(3.0).sleep();
+
+          return true;
 
         }
 
-        cout << "Almost reached the goal!" << endl;
-        ros::Duration(3.0).sleep();
-
-        return true;
 
       }
-
-      
-      //int dis_r = 60; 
 
       dis_r = min(dis_r, int(dis_from_best_cell));
       
@@ -633,13 +670,20 @@ namespace global_planner {
 
       rrt_star_cell* best_parent = get_best_parent(latest_cell, search_r);
 
-      if(best_parent == nullptr) {best_parent = best_cell;}
+      if(best_parent == nullptr) {
+
+        latest_cell->point = Point{mx_c, my_c};
+        latest_cell->parent = best_cell;
+        
+      }
+
+      else {
+
+        update_cell_cost(latest_cell, best_parent);
+        update_tree_connections(latest_cell, search_r);
+  
+      }
       
-      latest_cell->point = Point{mx_c, my_c};
-      latest_cell->parent = best_parent;
-
-      update_tree_connections(latest_cell, search_r);
-
       publish_marker_point(Point{mx_c, my_c}, -1, 0);
 
       rrt_tree.push_back(latest_cell);
