@@ -70,6 +70,8 @@ namespace global_planner {
             void update_rrt_star_path_points(std::vector<Point> &path_points, rrt_star_cell* final_cell);
             void update_rrt_star_planner_plan(std::vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal, const std::vector<Point> &path_points);
             void delete_all_markers();
+            rrt_star_cell* get_best_parent(rrt_star_cell* last_cell, int search_r);
+            void update_tree_connections(rrt_star_cell* latest_cell, int search_r);
 
             std::vector<rrt_star_cell*> rrt_tree;
             costmap_2d::Costmap2D* costmap_ros_;

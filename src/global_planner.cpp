@@ -410,6 +410,67 @@ namespace global_planner {
 
   }
 
+  GlobalPlanner::rrt_star_cell* GlobalPlanner::get_best_parent(rrt_star_cell* last_cell, int search_r){
+
+    cout << "Inside the get_best_parent function!" << endl;
+    //ros::Duration(1.0).sleep();
+    
+    int best_index = -1;
+
+    int mn_cost = numeric_limits<int>::infinity(); 
+
+    for(int i =0; i < rrt_tree.size(); i++) {
+
+      int cost =0 ; 
+
+      double dis = heu(last_cell->point, rrt_tree[i]->point);
+
+      if(dis > search_r) {continue;}
+
+      bool is_reachable = is_point_reachable(last_cell->point, rrt_tree[i]->point, dis);
+
+      cout << "i: " << i << " is_reachable: " << is_reachable << endl;
+
+      if(!is_reachable) {continue;}
+
+      int step_sz = 1; 
+
+      int num_steps = (dis/step_sz) + 1;
+
+      int mx_c = last_cell->point.x , my_c = last_cell->point.y;
+
+      double ang_ = atan2((int)rrt_tree[i]->point.y - my_c , (int)rrt_tree[i]->point.x - mx_c);
+
+      while(num_steps > 0){
+
+        int mx_d = mx_c + (num_steps * step_sz * cos(ang_));
+        int my_d = my_c + (num_steps * step_sz * sin(ang_));
+
+        unsigned int curr_cell_cost  = costmap_ros_->getCost(mx_d, my_d);
+
+        cost = cost + 1 + curr_cell_cost;  
+        num_steps--;
+
+      }
+
+      if(cost < mn_cost) {
+        
+        cout << "cost < mn_cost" << endl;
+
+        mn_cost = cost; 
+        best_index = i;
+      
+      }
+
+    }    
+
+    if(best_index == -1) {return nullptr ;}
+
+    else {return rrt_tree[best_index];}
+    
+  }
+
+
   bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan ){
     
     bool reached = false;
@@ -497,19 +558,7 @@ namespace global_planner {
 
       double cos_ =  cos(ang_);
       double sin_ = sin(ang_);
-
-      //double ang_ = atan2(nxt_pt.y - (int)my_c, nxt_pt.x - (int)mx_c);
-
-      cout <<"(nxt_pt.x,nxt_pt.y): (" << nxt_pt.x <<","<<nxt_pt.y <<")" << endl;
-      cout << "(mx_c,my_c): (" << mx_c  << "," << my_c  <<")" << endl;
       
-      //ros::Duration(1.0).sleep();
-
-      bool flag = (mx_c > nxt_pt.x);
-
-      
-      //cout << "(mx_c, mx_c): (" << mx_c << "," << my_c <<")" << endl;
-
       bool is_reachable = is_point_reachable(Point{mx_c, my_c}, nxt_pt, dis_r);
 
       if(!is_reachable) { continue; }
@@ -520,12 +569,19 @@ namespace global_planner {
       my_c = (int)my_c + ((int)num_steps * step_sz * sin_);
 
       rrt_star_cell* latest_cell = new rrt_star_cell(); 
+
+      int search_r = 100;
+
+      rrt_star_cell* best_parent = get_best_parent(latest_cell, search_r);
+
+      if(best_parent == nullptr) {best_parent = best_cell;}
+      
       latest_cell->point = Point{mx_c, my_c};
-      latest_cell->parent = best_cell;
+      latest_cell->parent = best_parent;
 
       publish_marker_point(Point{mx_c, my_c}, -1, 0);
 
-      
+
       rrt_tree.push_back(latest_cell);
 
     }
