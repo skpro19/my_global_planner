@@ -130,12 +130,6 @@ namespace global_planner {
     global_plan_pub.publish(my_path);
 
   }
-
-  bool GlobalPlanner::print_cell(const Cell &cell) {
-
-    cout << "cell.point: (" << cell.point.x <<"," << cell.point.y <<") cost: " << cell.cost_till_now << endl;
-
-  }
   
   void GlobalPlanner::print_world_params(const geometry_msgs::PoseStamped &start, const geometry_msgs::PoseStamped &goal, __uint32_t &mx_i, __uint32_t &my_i, __uint32_t &mx_f, __uint32_t &my_f){
 
@@ -156,6 +150,31 @@ namespace global_planner {
 
   }
 
+  bool GlobalPlanner::check_cell_neighbour(const Point &pt, int margin_sz){
+
+    //int margin_sz = 5;
+
+    
+
+    int is_reachable = 1;
+
+    for(int i = (int)pt.x - margin_sz; i <= (int)pt.x + margin_sz; i++) {
+      
+      for(int j = (int)pt.y - margin_sz; j <= (int)pt.y + margin_sz; j++) {
+
+        if(i <= map_xi || i >= map_xf || j <= map_yi || j >= map_yf) {is_reachable = 0;}
+
+        unsigned char cell_cost = costmap_ros_->getCost(i, j);
+
+        if(cell_cost == costmap_2d::LETHAL_OBSTACLE) {is_reachable = 0 ;}
+
+      }
+
+    }
+
+    return is_reachable;
+
+  }
   
   GlobalPlanner::Point GlobalPlanner::generate_next_goal(){
 
@@ -165,7 +184,6 @@ namespace global_planner {
 
       while(true) {
 
-   
         __uint32_t mx_ , my_, mx_i, my_i;
         
         mx_= rand() % (map_xf - map_xi + 1) + (map_xi);
@@ -178,13 +196,9 @@ namespace global_planner {
 
         }
 
-        unsigned char cell_cost = costmap_ros_->getCost(mx_, my_);
-        
-        bool flag = check_cell_neighbour(Point{mx_, my_});
+        int is_reachable = check_cell_neighbour(Point{mx_, my_});
 
-        if(!flag) {continue;}
-
-        publish_marker_point(Point{mx_, my_}, -1);
+        if(is_reachable == 0) {continue;}
         
         nxt_point = Point{mx_, my_};
         return nxt_point;
@@ -199,40 +213,95 @@ namespace global_planner {
   
   }
 
+  bool GlobalPlanner::is_point_reachable(const Point &p1, const Point &p2, int dis) {
 
-  GlobalPlanner::RRT_Cell* GlobalPlanner::get_closest_cell(const Point &nxt_pt) {
+    //double dis = heu(p1, p2);
+
+    int step_sz = 1;
+
+    int num_steps = (dis/ step_sz) + 1;
+
+    int mx_c = p1.x , my_c = p1.y;    
+
+    double ang_ = atan2((int)p2.y - (int)p1.y, (int)p2.x - (int)p1.x);
+
+    int is_reachable = 1;
+
+    while(num_steps > 0) {
+
+        __uint32_t mx_d = mx_c + num_steps * step_sz * cos(ang_);
+        __uint32_t my_d = my_c + num_steps * step_sz * sin(ang_);
+
+        is_reachable = check_cell_neighbour(Point{mx_d, my_d});
+
+        if(!is_reachable) {break;}
+        
+        num_steps--;  
+
+        
+    }
+
+    return is_reachable;
+
+  }
+
+  GlobalPlanner::rrt_star_cell* GlobalPlanner::get_closest_cell(const GlobalPlanner::Point &nxt_pt, int dis_r) {
       
-      if(head_cell == nullptr) {return nullptr;} 
+      long double mn_dis = std::numeric_limits<int>::max();  
+      rrt_star_cell* best_cell = nullptr;
 
-      if(head_cell->children.size() == 0) {
+      for(int i = 0; i < (int)rrt_tree.size(); i++) {
 
-        return head_cell;
+        double dis = heu(nxt_pt, rrt_tree[i]->point);
 
-      }
+        int dis_ = min(dis_r, (int)dis);
 
-      long double mn_dis = heu(nxt_pt, head_cell->point); 
-      RRT_Cell* best_cell = head_cell;
+        bool is_reachable = is_point_reachable(nxt_pt, rrt_tree[i]->point, dis_);
 
-      for(int i = 0; i < (int)head_cell->children.size(); i++) {
-
-        RRT_Cell* curr_cell = get_closest_cell(nxt_pt, head_cell->children[i]);
-
-        double dis = heu(nxt_pt, curr_cell->point);
+        if(!is_reachable){continue;}
 
         if(dis < mn_dis) {
 
           mn_dis = dis;
-          best_cell = curr_cell;
+          best_cell = rrt_tree[i];
 
         }
 
       }
       
+      if(best_cell == nullptr) {
+
+        cout << "Something might be wrong --- get_closest cell returns nullptr"<< endl;
+        //ros::Duration(4.0).sleep();
+
+      }
+
       return best_cell;
       
   }
 
-  void GlobalPlanner::publish_marker_point(const Point &curr_pt, int flag) {
+
+  void GlobalPlanner::delete_all_markers() {
+
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "map";
+    marker.ns = nh_.getNamespace();
+
+    marker.type = visualization_msgs::Marker::CUBE;
+    marker.action = visualization_msgs::Marker::DELETEALL;
+
+    
+    marker.id = marker_id_cnt++;
+    marker.header.stamp = ros::Time();
+
+    double wx_, wy_; 
+
+    goal_marker_pub.publish( marker);   
+
+  }
+
+
+  void GlobalPlanner::publish_marker_point(const Point &curr_pt, int flag, int duration) {
 
     std_msgs::ColorRGBA blue;
     blue.r = 0;
@@ -256,22 +325,16 @@ namespace global_planner {
 
     marker.type = visualization_msgs::Marker::CUBE;
     marker.action = visualization_msgs::Marker::ADD;
+
     
+
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
-
-    marker.lifetime = (flag==1) ? ros::Duration() : ros::Duration(3.0);
-
-    marker.scale.x = (flag == 1) ? 0.5 : 0.25;
-    marker.scale.y = (flag == 1) ? 0.5 : 0.25;
-    marker.scale.z = (flag == 1) ? 0.5 : 0.25;
     
     marker.color.a = 1.0; // Don't forget to set the alpha!
     
-    marker.color = (flag == 1) ? green: blue;
-
     marker.id = marker_id_cnt++;
     marker.header.stamp = ros::Time();
 
@@ -282,32 +345,51 @@ namespace global_planner {
     marker.pose.position.y = wy_;
     marker.pose.position.z = 1;
 
+    marker.scale.x = 0.5;
+    marker.scale.y = 0.5;
 
+    if(duration == 0) {marker.lifetime = ros::Duration();}      
+
+    else {marker.lifetime = ros::Duration(duration);}
+
+    if(flag == 1) {
+
+      marker.color = green; 
+      //marker.lifetime = ros::Duration();
+
+    }
+
+    if(flag == 0) {
+
+      marker.color = red;
+     
+    }
+
+    if(flag == -1) {
+
+      marker.color = blue; 
+     
+    }
     goal_marker_pub.publish( marker);   
 
   }
 
-  void GlobalPlanner::update_RRT_path_points(vector<Point> &path_points, RRT_Cell *final_cell) {
-    
-    int cnt =0;
 
-    while(final_cell != nullptr) {
-      
-      Point curr_pt = final_cell->point;
     
-      publish_marker_point(curr_pt, 1);
-      
-      path_points.push_back(curr_pt);
-       
-    
-      final_cell = final_cell->parent;
-    
+  void GlobalPlanner::update_rrt_star_path_points(vector<Point> &path_points, rrt_star_cell* final_cell){
+
+    rrt_star_cell* curr_cell = final_cell; 
+
+    while(curr_cell != nullptr){
+
+      path_points.push_back(curr_cell->point);
+      curr_cell = curr_cell->parent;
+      //publish_marker_point(curr_cell->point, 1, 0);
     }
 
-    
   }
-
-  void GlobalPlanner::update_RRT_planner_plan(vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal, const vector<Point> &path_points) {
+  
+  void GlobalPlanner::update_rrt_star_planner_plan(vector<geometry_msgs::PoseStamped> &plan, const geometry_msgs::PoseStamped &goal, const vector<Point> &path_points) {
 
 
     for(int i = 0; i < (int)path_points.size(); i++){
@@ -328,148 +410,11 @@ namespace global_planner {
 
   }
 
-  bool GlobalPlanner::check_cell_neighbour(const Point &pt) {
-    
-    int margin_sz = 5;
-
-    for(int i = (int)pt.x - margin_sz; i < (int)pt.x + margin_sz; i++) {
-
-      for(int j = (int)pt.y - margin_sz; j <= (int)pt.y + margin_sz; j++) {
-        
-        if(i <= map_xi || j <= map_xi || i >= map_xf || j>= map_yf) {return false;}
-
-        unsigned char cell_cost = costmap_ros_->getCost(i,j);
-
-        if(cell_cost == costmap_2d::LETHAL_OBSTACLE) {return false;}
-
-      }
-
-    }
-
-    return true;
-
-
-  }
-
-  bool GlobalPlanner::is_point_reachable(const Point &best_pt, const Point &nxt_pt, __uint32_t step_sz, __uint32_t &mx_c , __uint32_t &my_c){
-
-      //__uint32_t step_sz = 20;
-
-      double dis = heu(best_pt, nxt_pt);
-
-      if((__uint32_t) dis < step_sz) {
-
-        step_sz = (__uint32_t)dis;
-
-      }
-
-      bool valid_pt= true;
-
-      //double dis = heu(nxt_pt, Point{best_pt.x, best_pt.y});
-
-      double sin_th = double((int)nxt_pt.y - (int)best_pt.y) / dis;
-      double cos_th = double((int)nxt_pt.x - (int)best_pt.x) / dis;
-      
-
-      for(int i = 0; i <= step_sz; i++) {
-
-        __uint32_t mx_d = (int)best_pt.x + i * cos_th;
-        __uint32_t my_d = (int)best_pt.y+ i* sin_th;
-
-        if(mx_d <= map_xi || mx_d >= map_xf || my_d <= map_yi || my_d >= map_yf) {
-
-          valid_pt = false;
-          break;
-
-        }
-
-        bool flag = check_cell_neighbour(Point{mx_d, my_d});
-
-        if(!flag){
-
-          valid_pt = false;
-          break;
-          
-        }
-
-      }
-
-      if(valid_pt){
-
-
-        mx_c = best_pt.x + step_sz * cos_th;
-        my_c = best_pt.y + step_sz * sin_th;
-
-
-      }
-
-      return valid_pt;
-
-  }
-
-
-  bool GlobalPlanner::is_point_reachable(const Point &best_pt, const Point &nxt_pt, __uint32_t step_sz, __uint32_t &mx_c , __uint32_t &my_c){
-
-      //__uint32_t step_sz = 20;
-
-      double dis = heu(best_pt, nxt_pt);
-
-      if((__uint32_t) dis < step_sz) {
-
-        step_sz = (__uint32_t)dis;
-
-      }
-
-      bool valid_pt= true;
-
-      //double dis = heu(nxt_pt, Point{best_pt.x, best_pt.y});
-
-      double sin_th = double((int)nxt_pt.y - (int)best_pt.y) / dis;
-      double cos_th = double((int)nxt_pt.x - (int)best_pt.x) / dis;
-      
-
-      for(int i = 0; i <= step_sz; i++) {
-
-        __uint32_t mx_d = (int)best_pt.x + i * cos_th;
-        __uint32_t my_d = (int)best_pt.y+ i* sin_th;
-
-        if(mx_d <= map_xi || mx_d >= map_xf || my_d <= map_yi || my_d >= map_yf) {
-
-          valid_pt = false;
-          break;
-
-        }
-
-        bool flag = check_cell_neighbour(Point{mx_d, my_d});
-
-        if(!flag){
-
-          valid_pt = false;
-          break;
-          
-        }
-
-      }
-
-      if(valid_pt){
-
-
-        mx_c = best_pt.x + step_sz * cos_th;
-        my_c = best_pt.y + step_sz * sin_th;
-
-
-      }
-
-      return valid_pt;
-
-  }
-
   bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal,  std::vector<geometry_msgs::PoseStamped>& plan ){
-
     
-
     bool reached = false;
-
+    rrt_tree.clear(); 
+    
     __uint32_t mx_i, my_i, mx_f, my_f, mx_c, my_c;
 
     print_world_params(start, goal, mx_i, my_i, mx_f, my_f);
@@ -480,83 +425,112 @@ namespace global_planner {
     head_cell->point = Point{mx_i, my_i};
     head_cell->parent = nullptr;
 
-    vector<Point> path_points;
+    rrt_tree.push_back(head_cell);
 
-    while(true) {
+    vector<Point> path_points;
+    path_points.clear(); 
+
+    delete_all_markers();
+
+    int cnt =0 ;
+
+    while(true){
+      
+      int dis_r = 60;
 
       Point nxt_pt = generate_next_goal();
-      //last_marker_id_cnt = marker_id_cnt;
 
-      
-      rrt_star_cell* best_cell = get_closest_cell(nxt_pt);
-      Point best_pt = best_cell->point;
-      
-      rrt_star_cell* best_goal_cell = get_closest_cell(Point{mx_f, my_f});
+      publish_marker_point(nxt_pt, -1, 1);
 
-      //double dis_from_goal = heu(nxt_pt, Point{mx_f, my_f});
-      double dis_from_goal = heu(Point{mx_f, my_f}, best_goal_cell->point);
+      rrt_star_cell* best_cell = get_closest_cell(nxt_pt, dis_r);
 
-      if(dis_from_goal < 6) {
+      if(best_cell == nullptr) {continue;}
+
+      //publish_marker_point(best_cell->point, 0);
+
+      rrt_star_cell* best_goal_cell = get_closest_cell(Point{mx_f, my_f}, dis_r);
+
+      double dis_from_best_cell = heu(best_cell->point, nxt_pt);
+      double dis_from_goal = heu(Point{mx_f, my_c}, best_goal_cell->point);
+
+      if(dis_from_goal < 20) {
         
+        reached = true; 
+
+        rrt_star_cell* final_cell = new rrt_star_cell(); 
+        final_cell->parent = best_goal_cell;
+        final_cell->point = Point{mx_f, my_f};
+        rrt_tree.push_back(final_cell);
         
-        cout << "Almost reached the goal!" <<endl;
-        cout <<"dis_from_goal: " << dis_from_goal << endl;
-        //cout <<"Sleeping for 2 seconds!" << endl;
-        //ros::Duration(2.0).sleep();
 
-        if(is_point_reachable(best_goal_cell->point, Point{mx_f, my_f}, (__uint32_t)dis_from_goal, mx_c, my_c)) {
+        update_rrt_star_path_points(path_points, final_cell);
+        reverse(path_points.begin(), path_points.end());
 
-          rrt_star_cell* final_cell = new rrt_star_cell();
-          final_cell->point = Point{mx_f, my_f};
-          final_cell->parent = best_goal_cell;  
-          //best_goal_cell->children.push_back(final_cell);
-
-          update_rrt_star_path_points(path_points, final_cell);
-          reverse(path_points.begin(), path_points.end());
-          update_rrt_star_planner_plan(plan, goal, path_points);
-          publish_global_path(plan, goal);
-
-
-          reached = true;
-          break;
+        update_rrt_star_planner_plan(plan, goal, path_points);
+        publish_global_path(plan, goal);
+        
+        for(int i =0; i < (int)path_points.size(); i++){
+          
+          publish_marker_point(path_points[i], 1, 0);
 
         }
 
-        else {
+        cout << "Almost reached the goal!" << endl;
+        ros::Duration(3.0).sleep();
 
-          continue;
+        return true;
 
-        }        
-
-        
       }
-      
-      __uint32_t step_sz = 100;
 
-      bool valid_pt = is_point_reachable(best_pt, nxt_pt, step_sz, mx_c, my_c);
       
-      if(!valid_pt) {continue;}
+      //int dis_r = 60; 
+
+      dis_r = min(dis_r, int(dis_from_best_cell));
       
-      rrt_star_cell* latest_cell = new rrt_star_cell();
+      int step_sz = 1;
+
+      int num_steps = (dis_r/step_sz) + 1;
+
+      mx_c = best_cell->point.x ,my_c = best_cell->point.y;
+
+      double ang_ = atan2((int)nxt_pt.y - (int)my_c, (int)nxt_pt.x - (int)mx_c);
+
+      double cos_ =  cos(ang_);
+      double sin_ = sin(ang_);
+
+      //double ang_ = atan2(nxt_pt.y - (int)my_c, nxt_pt.x - (int)mx_c);
+
+      cout <<"(nxt_pt.x,nxt_pt.y): (" << nxt_pt.x <<","<<nxt_pt.y <<")" << endl;
+      cout << "(mx_c,my_c): (" << mx_c  << "," << my_c  <<")" << endl;
+      
+      //ros::Duration(1.0).sleep();
+
+      bool flag = (mx_c > nxt_pt.x);
+
+      
+      //cout << "(mx_c, mx_c): (" << mx_c << "," << my_c <<")" << endl;
+
+      bool is_reachable = is_point_reachable(Point{mx_c, my_c}, nxt_pt, dis_r);
+
+      if(!is_reachable) { continue; }
+
+      __uint32_t old_mxc = mx_c, old_myc = my_c;
+
+      mx_c = (int)mx_c + ((int)num_steps * step_sz * cos_);
+      my_c = (int)my_c + ((int)num_steps * step_sz * sin_);
+
+      rrt_star_cell* latest_cell = new rrt_star_cell(); 
       latest_cell->point = Point{mx_c, my_c};
       latest_cell->parent = best_cell;
+
+      publish_marker_point(Point{mx_c, my_c}, -1, 0);
+
       
-      //best_cell->children.push_back(latest_cell);
+      rrt_tree.push_back(latest_cell);
 
     }
-
-
-    cout <<"reached: " << reached << endl;
-
-
-    if(!reached) {
-
-      cout << "Something is wrong! ---- Could not reach near the goal!" << endl;
-
-    }
-
-    return true;
-
+  
+  
   }
 
 };
